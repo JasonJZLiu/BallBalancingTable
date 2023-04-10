@@ -1,8 +1,14 @@
-# BallBalancingTable
+# Vision-Based Ball Balancing Table
 A course project for MIE438: Microprocessors and Embedded Microcontrollers at the University of Toronto.
 
 Video Demo: https://www.youtube.com/watch?v=9Cm7HZLUdoY
 CAD Files: https://grabcad.com/library/ball-balance-table-1
+
+To run this code:
+```
+sudo pigpiod
+sudo python3 ball_balancing_table.py
+```
 
 Control Loop:
 - RGB Image captured by a USB webcam at 60 Hz
