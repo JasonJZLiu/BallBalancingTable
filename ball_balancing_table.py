@@ -5,8 +5,7 @@ import signal
 import threading
 import keyboard
 import numpy as np
-from gpiozero import AngularServo
-from gpiozero.pins.pigpio import PiGPIOFactory
+import RPi.GPIO as GPIO
 
 
 # blue lego ball HSV mask
@@ -40,21 +39,43 @@ REF_CALC_OFFSET = 0.001
 #-------------------------- SERVO  UTILS --------------------------#
 ####################################################################
 
-def servo_1_send(servo, angle):
-    if angle > 37:
-        angle = 37
-    elif angle < -37:
-        angle = -37
-    # offset of 6 degrees
-    servo.angle = -1 * angle - 6
+GPIO.setmode(GPIO.BOARD)
+class Servo:
+    def __init__(self, pin_num, zero_angle, angle_range, min_pulse_width, max_pulse_width, pwm_freq=50):
+        """
+        Args:
+            pin_num (int): pin number on the Raspberry Pi.
+            zero_angle (int): Servo angle that corresponds to the zeroth position
+            angle_range (int): Maximum allowable angle magnitude from the zeroth position
+            min_pulse_width (float): The minimum pulse width in seconds.
+            max_pulse_width (float): The maximum pulse width in seconds.
+            pwm_freq (float): The frequency of the PWM, defaulted to 50 Hz. 
+        """
+        self.angle_range = angle_range
+        self.zero_angle = zero_angle
+        self.duty_cycle_min = min_pulse_width * pwm_freq * 100
+        self.duty_cycle_max = max_pulse_width * pwm_freq * 100
+        self.duty_cycle_range = self.duty_cycle_max - self.duty_cycle_min
 
-def servo_2_send(servo, angle):
-    if angle > 37:
-        angle = 37
-    elif angle < -37:
-        angle = -37
-    # offset of 6 degrees
-    servo.angle = -1 * angle - 6
+        GPIO.setup(pin_num, GPIO.OUT)
+        self.pwm = GPIO.PWM(pin_num, pwm_freq)
+        self.pwm.start(0)
+
+    def send_servo_command(self, angle):
+        """
+        Args:
+            angle (float): Centered at 0 with a range of [-self.angle_range, self.angle_range].
+        """
+        # clamp the angles to stay within the allowable range
+        if angle > self.angle_range:
+            angle = self.angle_range
+        elif angle < -self.angle_range:
+            angle = -self.angle_range
+        # convert the angle to the range of 0 to 180
+        servo_angle = -1*angle + self.zero_angle
+        # compute the corresponding duty cycle
+        duty_cycle = (servo_angle / 180) * self.duty_cycle_range + self.duty_cycle_min
+        self.pwm.ChangeDutyCycle(duty_cycle)
 
 
 ####################################################################
@@ -123,11 +144,16 @@ def on_right_arrow():
 
 def control_loop():
     # set up servos
-    factory = PiGPIOFactory()
-    servo1 = AngularServo(27, min_pulse_width=0.0005, max_pulse_width=0.0025, pin_factory=factory)
-    servo2 = AngularServo(17, min_pulse_width=0.0005, max_pulse_width=0.0025, pin_factory=factory)
-    servo_1_send(servo1, 0)
-    servo_2_send(servo2, 0)
+    servo_1 = Servo(
+        pin_num=11, zero_angle=84, angle_range=37, 
+        min_pulse_width=0.0005, max_pulse_width=0.0025,
+    )
+    servo_2 = Servo(
+        pin_num=13, zero_angle=84, angle_range=37, 
+        min_pulse_width=0.0005, max_pulse_width=0.0025,
+    )
+    servo_1.send_servo_command(0)
+    servo_2.send_servo_command(0)
 
     # set up camera stream
     vid = cv2.VideoCapture(2)
@@ -202,8 +228,8 @@ def control_loop():
             u_x = BETA * previous_u_x + (1 - BETA) * u_x
             u_y = BETA * previous_u_y + (1 - BETA) * u_y
             # send output to servos
-            servo_1_send(servo1, u_x)
-            servo_2_send(servo2, u_y)
+            servo_1.send_servo_command(u_x)
+            servo_2.send_servo_command(u_y)
             # store values for the next iteration
             previous_ball_center = ball_center
             previous_u_x = u_x
@@ -211,8 +237,8 @@ def control_loop():
             dt = time.time() - start_time
         else:
             # reset the table if the ball is not detected
-            servo_1_send(servo1, 0)
-            servo_2_send(servo2, 0)
+            servo_1.send_servo_command(0)
+            servo_2.send_servo_command(0)
             # reset variables
             previous_u_x = 0
             previous_u_y = 0
