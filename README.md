@@ -1,4 +1,4 @@
-# BallBalancingTable
+# Vision-Based Ball Balancing Table
 A course project for MIE438: Microprocessors and Embedded Microcontrollers at the University of Toronto.
 
 Video Demo: https://www.youtube.com/watch?v=9Cm7HZLUdoY
