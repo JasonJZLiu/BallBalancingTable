@@ -4,6 +4,12 @@ A course project for MIE438: Microprocessors and Embedded Microcontrollers at th
 Video Demo: https://www.youtube.com/watch?v=9Cm7HZLUdoY
 CAD Files: https://grabcad.com/library/ball-balance-table-1
 
+To run this code:
+```
+sudo pigpiod
+sudo python3 ball_balancing_table.py
+```
+
 Control Loop:
 - RGB Image captured by a USB webcam at 60 Hz
 - Performs HSV Masking, Erosion + Dilation, Contour Finding, and Moments Computation to acquire the ball position using OpenCV
